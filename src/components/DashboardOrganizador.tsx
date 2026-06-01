@@ -1,7 +1,9 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { glassStyles } from '@/components/ui/glassStyles';
 import { logoutAction } from '@/app/actions';
+import { createClient } from '@/utils/supabase/client';
 
 interface Usuario {
   id: string;
@@ -52,12 +54,63 @@ export function DashboardOrganizador({
     ingresos_total: number;
   };
 }) {
-  const entradasVendidas = eventos.reduce(
+  const supabase = createClient();
+  const [eventosActuales, setEventosActuales] = useState<Evento[]>(eventos);
+
+  async function actualizarStockEventos() {
+    const eventoIds = eventosActuales.map((evento) => evento.id);
+    if (eventoIds.length === 0) return;
+
+    const { data } = await supabase
+      .from('entradas')
+      .select('evento_id')
+      .in('evento_id', eventoIds);
+
+    const vendidasPorEvento = (data || []).reduce((mapa: Map<string, number>, entrada: any) => {
+      mapa.set(entrada.evento_id, (mapa.get(entrada.evento_id) || 0) + 1);
+      return mapa;
+    }, new Map<string, number>());
+
+    setEventosActuales((actuales) =>
+      actuales.map((evento) => ({
+        ...evento,
+        entradas_disponibles: Math.max(
+          evento.total_entradas - (vendidasPorEvento.get(evento.id) || 0),
+          0
+        ),
+      }))
+    );
+  }
+
+  useEffect(() => {
+    const canal = supabase
+      .channel('stock-eventos-organizador')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'entradas' },
+        () => {
+          actualizarStockEventos();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(canal);
+    };
+  }, [eventosActuales]);
+
+  const entradasVendidas = eventosActuales.reduce(
     (acc, evt) => acc + (evt.total_entradas - evt.entradas_disponibles),
     0
   );
 
-  const ingresosFormato = `$${parseFloat(estadisticas.ingresos_total.toString()).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const ingresosActuales = eventosActuales.reduce(
+    (total, evento) =>
+      total + (evento.total_entradas - evento.entradas_disponibles) * Number(evento.precio || 0),
+    0
+  );
+
+  const ingresosFormato = `Bs ${parseFloat(ingresosActuales.toString()).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   return (
     <div
@@ -119,7 +172,7 @@ export function DashboardOrganizador({
               </button>
             </div>
 
-            {eventos.length > 0 ? (
+            {eventosActuales.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
@@ -138,7 +191,7 @@ export function DashboardOrganizador({
                     </tr>
                   </thead>
                   <tbody>
-                    {eventos.map((evento) => (
+                    {eventosActuales.map((evento) => (
                       <tr
                         key={evento.id}
                         className="border-b border-white/5 hover:bg-white/5 transition-colors"
@@ -153,7 +206,7 @@ export function DashboardOrganizador({
                             year: 'numeric',
                           })}
                         </td>
-                        <td className="py-3 px-4 text-white">${evento.precio}</td>
+                        <td className="py-3 px-4 text-white">Bs {evento.precio}</td>
                         <td className="py-3 px-4 text-white">
                           {evento.entradas_disponibles}/{evento.total_entradas}
                         </td>

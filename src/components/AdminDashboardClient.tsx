@@ -94,6 +94,8 @@ export function AdminDashboardClient({
   };
 }) {
   const [seccionAdmin, setSeccionAdmin] = useState<'resumen' | 'usuarios' | 'eventos'>('resumen');
+  const [eventosResumen, setEventosResumen] = useState<Evento[]>(eventosIniciales);
+  const [estadisticasActuales, setEstadisticasActuales] = useState(estadisticas);
   const [perfiles, setPerfiles] = useState<Perfil[]>([]);
   const [filtroRol, setFiltroRol] = useState<'todos' | 'usuario' | 'organizador' | 'admin'>('todos');
   const [eventosFecha, setEventosFecha] = useState<EventoDetallado[]>([]);
@@ -125,6 +127,79 @@ export function AdminDashboardClient({
 
   const supabase = createClient();
 
+  async function aplicarStockReal(eventos: Evento[]): Promise<Evento[]> {
+    const eventoIds = eventos.map((evento) => evento.id);
+    if (eventoIds.length === 0) return eventos;
+
+    const { data } = await supabase
+      .from('entradas')
+      .select('evento_id')
+      .in('evento_id', eventoIds);
+
+    const vendidasPorEvento = (data || []).reduce((mapa: Map<string, number>, entrada: any) => {
+      mapa.set(entrada.evento_id, (mapa.get(entrada.evento_id) || 0) + 1);
+      return mapa;
+    }, new Map<string, number>());
+
+    return eventos.map((evento) => ({
+      ...evento,
+      entradas_disponibles: Math.max(
+        evento.total_entradas - (vendidasPorEvento.get(evento.id) || 0),
+        0
+      ),
+    }));
+  }
+
+  async function cargarResumenAdmin() {
+    const { data: eventosRaw } = await supabase
+      .from('eventos')
+      .select('id, titulo, fecha, total_entradas, entradas_disponibles, creado_por')
+      .order('fecha', { ascending: false })
+      .limit(10);
+
+    const { data: perfilesRaw } = await supabase.from('perfiles').select('id, nombre_completo');
+    const perfilesMap = new Map(
+      (perfilesRaw || []).map((p: any) => [p.id, p.nombre_completo || 'Desconocido'])
+    );
+
+    const eventos = await aplicarStockReal(
+      (eventosRaw || []).map((evt: any) => ({
+        id: evt.id,
+        titulo: evt.titulo,
+        fecha: evt.fecha,
+        total_entradas: evt.total_entradas,
+        entradas_disponibles: evt.entradas_disponibles,
+        creado_por_nombre: perfilesMap.get(evt.creado_por) || 'Desconocido',
+      }))
+    );
+
+    const { count: usuariosCount } = await supabase
+      .from('perfiles')
+      .select('id', { count: 'exact' });
+    const { count: eventosCount } = await supabase
+      .from('eventos')
+      .select('id', { count: 'exact' });
+    const { count: entradasCount } = await supabase
+      .from('entradas')
+      .select('id', { count: 'exact' });
+    const { data: entradasConPrecio } = await supabase
+      .from('entradas')
+      .select('eventos(precio)');
+
+    const ingresosTotal = (entradasConPrecio || []).reduce((total: number, entrada: any) => {
+      const evento = Array.isArray(entrada.eventos) ? entrada.eventos[0] : entrada.eventos;
+      return total + Number(evento?.precio || 0);
+    }, 0);
+
+    setEventosResumen(eventos);
+    setEstadisticasActuales({
+      usuarios_totales: usuariosCount || 0,
+      eventos_totales: eventosCount || 0,
+      entradas_vendidas: entradasCount || 0,
+      ingresos_total: ingresosTotal,
+    });
+  }
+
   // Cargar perfiles cuando se selecciona la sección de usuarios
   useEffect(() => {
     if (seccionAdmin === 'usuarios' && perfiles.length === 0) {
@@ -137,6 +212,26 @@ export function AdminDashboardClient({
     if (seccionAdmin === 'eventos') {
       cargarEventosPorFecha();
     }
+  }, [seccionAdmin, fechaSeleccionada]);
+
+  useEffect(() => {
+    const canal = supabase
+      .channel('stock-eventos-admin')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'entradas' },
+        () => {
+          cargarResumenAdmin();
+          if (seccionAdmin === 'eventos') {
+            cargarEventosPorFecha();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(canal);
+    };
   }, [seccionAdmin, fechaSeleccionada]);
 
   async function cargarPerfiles() {
@@ -166,7 +261,37 @@ export function AdminDashboardClient({
         .order('titulo', { ascending: true });
 
       if (error) throw error;
-      setEventosFecha((data || []) as EventoDetallado[]);
+
+      const eventos = (data || []) as EventoDetallado[];
+      const eventoIds = eventos.map((evento) => evento.id);
+
+      if (eventoIds.length === 0) {
+        setEventosFecha([]);
+        return;
+      }
+
+      const { data: entradasRaw } = await supabase
+        .from('entradas')
+        .select('evento_id')
+        .in('evento_id', eventoIds);
+
+      const vendidasPorEvento = (entradasRaw || []).reduce(
+        (mapa: Map<string, number>, entrada: any) => {
+          mapa.set(entrada.evento_id, (mapa.get(entrada.evento_id) || 0) + 1);
+          return mapa;
+        },
+        new Map<string, number>()
+      );
+
+      setEventosFecha(
+        eventos.map((evento) => ({
+          ...evento,
+          entradas_disponibles: Math.max(
+            evento.total_entradas - (vendidasPorEvento.get(evento.id) || 0),
+            0
+          ),
+        }))
+      );
     } catch (error) {
       console.error('Error cargando eventos:', error);
     } finally {
@@ -441,27 +566,27 @@ export function AdminDashboardClient({
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <Metrica
                 titulo="Usuarios Totales"
-                valor={estadisticas.usuarios_totales}
+                valor={estadisticasActuales.usuarios_totales}
                 icono="👥"
                 descripcion="Registrados en el sistema"
                 onClick={() => setSeccionAdmin('usuarios')}
               />
               <Metrica
                 titulo="Eventos Totales"
-                valor={estadisticas.eventos_totales}
+                valor={estadisticasActuales.eventos_totales}
                 icono="🎭"
                 descripcion="En la plataforma"
                 onClick={() => setSeccionAdmin('eventos')}
               />
               <Metrica
                 titulo="Entradas Vendidas"
-                valor={estadisticas.entradas_vendidas}
+                valor={estadisticasActuales.entradas_vendidas}
                 icono="🎟️"
                 descripcion="Total de transacciones"
               />
               <Metrica
                 titulo="Ingresos Totales"
-                valor={formatearDinero(estadisticas.ingresos_total)}
+                valor={formatearDinero(estadisticasActuales.ingresos_total)}
                 icono="💰"
                 descripcion="Recaudación acumulada"
               />
@@ -470,7 +595,7 @@ export function AdminDashboardClient({
             <div className={glassStyles.panel + ' p-6'}>
               <h2 className="text-xl font-bold text-white mb-6">Eventos Recientes</h2>
 
-              {eventosIniciales.length > 0 ? (
+              {eventosResumen.length > 0 ? (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
@@ -485,7 +610,7 @@ export function AdminDashboardClient({
                       </tr>
                     </thead>
                     <tbody>
-                      {eventosIniciales.map((evento) => {
+                      {eventosResumen.map((evento) => {
                         const vendidas = evento.total_entradas - evento.entradas_disponibles;
                         const porcentaje = Math.round(
                           (vendidas / evento.total_entradas) * 100

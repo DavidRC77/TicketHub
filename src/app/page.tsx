@@ -28,6 +28,7 @@ interface Evento {
 }
 
 interface EventoFormato {
+  id: string;
   titulo: string;
   categoria: string;
   ubicacion: string;
@@ -79,6 +80,20 @@ export default async function Page() {
 
   const perfilTyped = perfil as Perfil;
 
+  async function obtenerVendidasPorEvento(eventoIds: string[]) {
+    if (eventoIds.length === 0) return new Map<string, number>();
+
+    const { data } = await supabase
+      .from('entradas')
+      .select('evento_id')
+      .in('evento_id', eventoIds);
+
+    return (data || []).reduce((mapa: Map<string, number>, entrada: any) => {
+      mapa.set(entrada.evento_id, (mapa.get(entrada.evento_id) || 0) + 1);
+      return mapa;
+    }, new Map<string, number>());
+  }
+
   if (perfilTyped.rol === 'usuario') {
     const { data: eventosRaw } = await supabase
       .from('eventos')
@@ -87,13 +102,21 @@ export default async function Page() {
       )
       .order('fecha', { ascending: true });
 
+    const vendidasPorEvento = await obtenerVendidasPorEvento(
+      (eventosRaw || []).map((evt: Evento) => evt.id)
+    );
+
     const eventos: EventoFormato[] = (eventosRaw || []).map((evt: Evento) => ({
+      id: evt.id,
       titulo: evt.titulo,
       categoria: evt.categoria,
       ubicacion: evt.ubicacion,
       fecha: evt.fecha,
       precio: evt.precio,
-      entradasDisponibles: evt.entradas_disponibles,
+      entradasDisponibles: Math.max(
+        evt.total_entradas - (vendidasPorEvento.get(evt.id) || 0),
+        0
+      ),
       totalEntradas: evt.total_entradas,
       urlImagen: evt.url_imagen || undefined,
       calificacion: evt.calificacion || 5.0,
@@ -119,15 +142,12 @@ export default async function Page() {
     const eventosActivos = estadisticasRaw?.length || 0;
 
     const eventoIds = (eventosRaw || []).map((e: any) => e.id);
+    const vendidasPorEvento = await obtenerVendidasPorEvento(eventoIds);
     
     let entradasVendidas = 0;
-    if (eventoIds.length > 0) {
-      const { data: entradasRaw } = await supabase
-        .from('entradas')
-        .select('id', { count: 'exact' })
-        .in('evento_id', eventoIds);
-      entradasVendidas = entradasRaw?.length || 0;
-    }
+    vendidasPorEvento.forEach((vendidas) => {
+      entradasVendidas += vendidas;
+    });
 
     const preciosPorEvento = new Map(
       (eventosRaw || []).map((evt: any) => [evt.id, Number(evt.precio || 0)])
@@ -151,7 +171,10 @@ export default async function Page() {
       titulo: evt.titulo,
       fecha: evt.fecha,
       precio: evt.precio,
-      entradas_disponibles: evt.entradas_disponibles,
+      entradas_disponibles: Math.max(
+        evt.total_entradas - (vendidasPorEvento.get(evt.id) || 0),
+        0
+      ),
       total_entradas: evt.total_entradas,
     }));
 
@@ -177,6 +200,10 @@ export default async function Page() {
       .order('fecha', { ascending: false })
       .limit(10);
 
+    const vendidasPorEvento = await obtenerVendidasPorEvento(
+      (eventosRaw || []).map((evt: any) => evt.id)
+    );
+
     const { data: perfilesRaw } = await supabase.from('perfiles').select('id, nombre_completo');
 
     const perfilesMap = new Map(
@@ -188,7 +215,10 @@ export default async function Page() {
       titulo: evt.titulo,
       fecha: evt.fecha,
       total_entradas: evt.total_entradas,
-      entradas_disponibles: evt.entradas_disponibles,
+      entradas_disponibles: Math.max(
+        evt.total_entradas - (vendidasPorEvento.get(evt.id) || 0),
+        0
+      ),
       creado_por_nombre: perfilesMap.get(evt.creado_por) || 'Desconocido',
     }));
 

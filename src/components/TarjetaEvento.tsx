@@ -11,6 +11,7 @@ interface EventoProps {
     totalEntradas: number;
     urlImagen?: string;
     calificacion?: number;
+    onComprar?: () => void;
 }
 
 export const TarjetaEvento: React.FC<EventoProps> = ({
@@ -22,18 +23,23 @@ export const TarjetaEvento: React.FC<EventoProps> = ({
     entradasDisponibles,
     totalEntradas,
     urlImagen,
-    calificacion = 5.0
+    calificacion = 5.0,
+    onComprar
 }) => {
     const porcentajeVendido = Math.round(((totalEntradas - entradasDisponibles) / totalEntradas) * 100);
 
     return (
         <div className={glassStyles.tarjeta}>
             <div className="relative h-48 w-full overflow-hidden rounded-t-xl bg-slate-900">
-                <img
-                    src={urlImagen || "/placeholder-evento.jpg"}
-                    alt={titulo}
-                    className="h-full w-full object-cover opacity-80"
-                />
+                {urlImagen ? (
+                    <img
+                        src={urlImagen}
+                        alt={titulo}
+                        className="h-full w-full object-cover opacity-80"
+                    />
+                ) : (
+                    <div className="h-full w-full bg-gradient-to-br from-slate-900 via-indigo-950 to-violet-950" />
+                )}
                 <span className="absolute top-3 left-3 bg-violet-900/80 backdrop-blur-md text-violet-300 text-xs font-semibold px-2.5 py-1 rounded-full uppercase tracking-wider">
                     🎵 {categoria}
                 </span>
@@ -66,7 +72,16 @@ export const TarjetaEvento: React.FC<EventoProps> = ({
                     </div>
                 </div>
 
-                <button className={`w-full mt-5 py-3 rounded-xl flex items-center justify-center gap-2 ${glassStyles.botonPrimario}`}>
+                <button
+                    type="button"
+                    onClick={onComprar}
+                    disabled={entradasDisponibles <= 0}
+                    className={`w-full mt-5 py-3 rounded-xl flex items-center justify-center gap-2 ${
+                        entradasDisponibles > 0
+                            ? glassStyles.botonPrimario
+                            : 'bg-slate-700/60 text-slate-400 cursor-not-allowed'
+                    }`}
+                >
                     🎟️ Comprar Entradas
                 </button>
             </div>
