@@ -39,7 +39,11 @@ function formatearBolivianos(monto: number) {
 
 export function DashboardUsuario({ usuario, eventos }: { usuario: Usuario; eventos: Evento[] }) {
   const supabase = createClient();
-  const [eventosActuales, setEventosActuales] = useState<Evento[]>(eventos);
+  const [eventosActuales, setEventosActuales] = useState<Evento[]>(() => {
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    return eventos.filter((evento) => new Date(evento.fecha) >= hoy);
+  });
   const [eventoSeleccionado, setEventoSeleccionado] = useState<Evento | null>(null);
   const [procesandoPago, setProcesandoPago] = useState(false);
   const [compraExitosa, setCompraExitosa] = useState(false);
@@ -262,7 +266,7 @@ export function DashboardUsuario({ usuario, eventos }: { usuario: Usuario; event
                 entradasDisponibles={evento.entradasDisponibles}
                 totalEntradas={evento.totalEntradas}
                 urlImagen={evento.urlImagen}
-                calificacion={evento.calificacion}
+                
               />
             ))
           ) : (

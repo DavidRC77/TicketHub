@@ -61,8 +61,8 @@ export const TarjetaEvento: React.FC<EventoProps> = ({
                     📌 {ubicacion}
                 </p>
 
-                <div className="mt-4 flex justify-between text.xs text-slate-300 border-t border-white/5 pt-3">
-                    <div>📡 {fechaFormateada}</div>
+                <div className="mt-4 flex justify-between text-xs text-slate-300 border-t border-white/5 pt-3">
+                    <div suppressHydrationWarning>📡 {fechaFormateada}</div>
                     <div className="text-right text-lg font-bold text-violet-400">Bs {precio}</div>
                 </div>
 
@@ -83,7 +83,7 @@ export const TarjetaEvento: React.FC<EventoProps> = ({
                     type="button"
                     onClick={onComprar}
                     disabled={entradasDisponibles <= 0}
-                    className={`w-full mt-5 py-3 rounded-xl flex items-center justify-center gap-2 $|
+                    className={`w-full mt-5 py-3 rounded-xl flex items-center justify-center gap-2 ${
                         entradasDisponibles > 0
                             ? glassStyles.botonPrimario
                             : 'bg-slate-700/60 text-slate-400 cursor-not-allowed'

@@ -19,9 +19,10 @@ interface Evento {
   fecha: string;
   precio: number;
   url_imagen?: string | null;
-  calificacion?: number | null;
   entradas_disponibles: number;
   total_entradas: number;
+  descripcion?: string;
+  ubicacion?: string;
 }
 
 interface MetricaProps {
@@ -90,36 +91,42 @@ export function DashboardOrganizador({
     };
 
     if (editandoEvento) {
-      const res = await fetch('/api/events', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          eventId: editandoEvento.id,
-          updates: {
-            title: payload.titulo,
-            description: payload.descripcion,
-            date: payload.fecha,
-            location: payload.ubicacion,
-            category: payload.categoria,
-            price: payload.precio,
-            totalTickets: payload.total_entradas
-          },
-          userId: usuario.id,
-          userRole: usuario.rol
-        })
-      });
-      if (res.ok) location.reload();
+      const { error } = await supabase.from('eventos').update({
+        titulo: payload.titulo,
+        descripcion: payload.descripcion,
+        fecha: payload.fecha,
+        ubicacion: payload.ubicacion,
+        categoria: payload.categoria,
+        precio: payload.precio,
+        total_entradas: payload.total_entradas
+      }).eq('id', editandoEvento.id);
+
+      if (!error) location.reload();
+      else alert('Error: ' + error.message);
     } else {
-      const res = await fetch('/api/events', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      if (res.ok) location.reload();
-      else { const e = await res.json(); alert('Error: ' + e.error); }
+      const { error } = await supabase.from('eventos').insert([{
+        titulo: payload.titulo,
+        descripcion: payload.descripcion,
+        fecha: payload.fecha,
+        ubicacion: payload.ubicacion,
+        categoria: payload.categoria,
+        precio: payload.precio,
+        total_entradas: payload.total_entradas,
+        entradas_disponibles: payload.total_entradas,
+        creado_por: payload.userId
+      }]);
+
+      if (!error) location.reload();
+      else alert('Error: ' + error.message);
     }
   }
 
+  async function eliminarEvento(id: string) {
+    if (!confirm('¿Está seguro de eliminar este evento?')) return;
+    const { error } = await supabase.from('eventos').delete().eq('id', id);
+    if (!error) location.reload();
+    else alert('Error: ' + error.message);
+  }
 
   async function actualizarStockEventos() {
     const eventoIds = eventosActuales.map((evento) => evento.id);
@@ -220,7 +227,7 @@ export function DashboardOrganizador({
               <button
                 onClick={() => {
                   setEditandoEvento(null);
-                  setFormularioEvento({ titulo: '', categoria: 'Otro', url_imagen: '', calificacion: '5.0', fecha: '', ubicacion: '', precio: '', total_entradas: '', descripcion: '' });
+                  setFormularioEvento({ titulo: '', categoria: 'Otro', url_imagen: '', fecha: '', ubicacion: '', precio: '', total_entradas: '', descripcion: '' });
                 }}
                 className={`px-4 py-2 rounded-lg text-white font-medium text-sm ${glassStyles.botonPrimario}`}
               >
@@ -314,10 +321,10 @@ export function DashboardOrganizador({
                         </td>
                         <td className="py-3 px-4 text-white">Bs {evento.precio}</td>
                         <td className="py-3 px-4 space-x-2">
-                          <button onClick={() => { setEditandoEvento(evento); setFormularioEvento({ titulo: evento.titulo, categoria: evento.categoria, url_imagen: evento.url_imagen || '', calificacion: evento.calificacion ? evento.calificacion.toString() : '5.0', fecha: evento.fecha, ubicacion: 'Sin ubicaci�n', precio: evento.precio.toString(), total_entradas: evento.total_entradas.toString(), descripcion: '' }); }} className="text-violet-400 hover:text-violet-300 text-xs font-medium transition-colors">
+                          <button onClick={() => { setEditandoEvento(evento); setFormularioEvento({ titulo: evento.titulo, categoria: evento.categoria, url_imagen: evento.url_imagen || '', fecha: evento.fecha ? (evento.fecha.includes('T') ? evento.fecha.slice(0, 16) : evento.fecha) : '', ubicacion: evento.ubicacion || '', precio: evento.precio.toString(), total_entradas: evento.total_entradas.toString(), descripcion: evento.descripcion || '' }); }} className="text-violet-400 hover:text-violet-300 text-xs font-medium transition-colors">
                             Editar
                           </button>
-                          <button className="text-red-400 hover:text-red-300 text-xs font-medium transition-colors">
+                          <button onClick={() => eliminarEvento(evento.id)} className="text-red-400 hover:text-red-300 text-xs font-medium transition-colors">
                             Eliminar
                           </button>
                         </td>
