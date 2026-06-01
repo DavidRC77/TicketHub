@@ -1,0 +1,28 @@
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition duration-200;
+  }
+  
+  .btn-secondary {
+    @apply px-4 py-2 bg-gray-100 text-black rounded-lg hover:bg-gray-200 transition duration-200;
+  }
+  
+  .card {
+    @apply bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition;
+  }
+}
