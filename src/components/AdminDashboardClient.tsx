@@ -103,14 +103,6 @@ export function AdminDashboardClient({
     new Date().toISOString().split('T')[0]
   );
   const [cargando, setCargando] = useState(false);
-  const [editandoEvento, setEditandoEvento] = useState<EventoDetallado | null>(null);
-  const [formularioEvento, setFormularioEvento] = useState({
-    titulo: '',
-    descripcion: '',
-    ubicacion: '',
-    precio: '',
-    total_entradas: '',
-  });
   const [mostraFormularioPersonal, setMostraFormularioPersonal] = useState(false);
   const [formularioPersonal, setFormularioPersonal] = useState({
     correo: '',
@@ -136,7 +128,7 @@ export function AdminDashboardClient({
       .select('evento_id')
       .in('evento_id', eventoIds);
 
-    const vendidasPorEvento = (data || []).reduce((mapa: Map<string, number>, entrada: any) => {
+    const vendidasPorEvento = (data || []).reduce((mapa: Map<string, number>, entrada: { evento_id: string }) => {
       mapa.set(entrada.evento_id, (mapa.get(entrada.evento_id) || 0) + 1);
       return mapa;
     }, new Map<string, number>());
@@ -159,11 +151,11 @@ export function AdminDashboardClient({
 
     const { data: perfilesRaw } = await supabase.from('perfiles').select('id, nombre_completo');
     const perfilesMap = new Map(
-      (perfilesRaw || []).map((p: any) => [p.id, p.nombre_completo || 'Desconocido'])
+      (perfilesRaw || []).map((p: { id: string; nombre_completo: string | null }) => [p.id, p.nombre_completo || 'Desconocido'])
     );
 
     const eventos = await aplicarStockReal(
-      (eventosRaw || []).map((evt: any) => ({
+      (eventosRaw || []).map((evt: { id: string; titulo: string; fecha: string; total_entradas: number; entradas_disponibles: number; creado_por: string }) => ({
         id: evt.id,
         titulo: evt.titulo,
         fecha: evt.fecha,
@@ -186,7 +178,7 @@ export function AdminDashboardClient({
       .from('entradas')
       .select('eventos(precio)');
 
-    const ingresosTotal = (entradasConPrecio || []).reduce((total: number, entrada: any) => {
+    const ingresosTotal = (entradasConPrecio || []).reduce((total: number, entrada: { eventos: { precio: number } | { precio: number }[] | null }) => {
       const evento = Array.isArray(entrada.eventos) ? entrada.eventos[0] : entrada.eventos;
       return total + Number(evento?.precio || 0);
     }, 0);
@@ -205,6 +197,7 @@ export function AdminDashboardClient({
     if (seccionAdmin === 'usuarios' && perfiles.length === 0) {
       cargarPerfiles();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seccionAdmin]);
 
   // Cargar eventos cuando se selecciona la sección de eventos o cambia la fecha
@@ -212,6 +205,7 @@ export function AdminDashboardClient({
     if (seccionAdmin === 'eventos') {
       cargarEventosPorFecha();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seccionAdmin, fechaSeleccionada]);
 
   useEffect(() => {
@@ -232,6 +226,7 @@ export function AdminDashboardClient({
     return () => {
       supabase.removeChannel(canal);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seccionAdmin, fechaSeleccionada]);
 
   async function cargarPerfiles() {
@@ -276,7 +271,7 @@ export function AdminDashboardClient({
         .in('evento_id', eventoIds);
 
       const vendidasPorEvento = (entradasRaw || []).reduce(
-        (mapa: Map<string, number>, entrada: any) => {
+        (mapa: Map<string, number>, entrada: { evento_id: string }) => {
           mapa.set(entrada.evento_id, (mapa.get(entrada.evento_id) || 0) + 1);
           return mapa;
         },
@@ -436,28 +431,6 @@ export function AdminDashboardClient({
     }
   }
 
-  function abrirEdicion(evento: EventoDetallado) {
-    setEditandoEvento(evento);
-    setFormularioEvento({
-      titulo: evento.titulo,
-      descripcion: evento.descripcion,
-      ubicacion: evento.ubicacion,
-      precio: evento.precio.toString(),
-      total_entradas: evento.total_entradas.toString(),
-    });
-  }
-
-  function cerrarEdicion() {
-    setEditandoEvento(null);
-    setFormularioEvento({
-      titulo: '',
-      descripcion: '',
-      ubicacion: '',
-      precio: '',
-      total_entradas: '',
-    });
-  }
-
   const perfilesFiltrados =
     filtroRol === 'todos' ? perfiles : perfiles.filter((p) => p.rol === filtroRol);
 
@@ -474,6 +447,9 @@ export function AdminDashboardClient({
               </span>
             </h1>
             <p className="text-sm text-slate-400">Panel de Administración</p>
+            <p className="text-xs text-slate-500">
+              {usuarioAuth.nombre_completo || usuarioAuth.correo}
+            </p>
           </div>
           <form action={logoutAction}>
             <button

@@ -33,7 +33,7 @@ export const TarjetaEvento: React.FC<EventoProps> = ({
         if (!isNaN(dateObj.getTime())) {
             fechaFormateada = formatDate(dateObj);
         }
-    } catch (e) {
+    } catch {
         // Ignorar error
     }
 

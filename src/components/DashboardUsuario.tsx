@@ -103,6 +103,7 @@ export function DashboardUsuario({ usuario, eventos }: { usuario: Usuario; event
     return () => {
       supabase.removeChannel(canal);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventosActuales]);
 
   function cerrarModal() {

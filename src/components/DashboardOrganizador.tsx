@@ -168,6 +168,7 @@ export function DashboardOrganizador({
     return () => {
       supabase.removeChannel(canal);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventosActuales]);
 
   const entradasVendidas = eventosActuales.reduce(
