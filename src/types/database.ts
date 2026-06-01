@@ -16,6 +16,8 @@ export interface DatabaseEvent {
   ubicacion: string;
   fecha: string;
   precio: number;
+  calificacion: number | null;
+  url_imagen: string | null;
   total_entradas: number;
   entradas_disponibles: number;
   creado_por: string;

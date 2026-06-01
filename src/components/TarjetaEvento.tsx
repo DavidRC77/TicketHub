@@ -1,5 +1,6 @@
 import React from 'react';
 import { glassStyles } from './ui/glassStyles';
+import { formatDate } from '../utils/helpers';
 
 interface EventoProps {
     titulo: string;
@@ -10,7 +11,6 @@ interface EventoProps {
     entradasDisponibles: number;
     totalEntradas: number;
     urlImagen?: string;
-    calificacion?: number;
     onComprar?: () => void;
 }
 
@@ -23,10 +23,20 @@ export const TarjetaEvento: React.FC<EventoProps> = ({
     entradasDisponibles,
     totalEntradas,
     urlImagen,
-    calificacion = 5.0,
     onComprar
 }) => {
     const porcentajeVendido = Math.round(((totalEntradas - entradasDisponibles) / totalEntradas) * 100);
+
+    let fechaFormateada = fecha;
+    try {
+        const dateObj = new Date(fecha);
+        if (!isNaN(dateObj.getTime())) {
+            fechaFormateada = formatDate(dateObj);
+        }
+    } catch (e) {
+        // Ignorar error
+    }
+
 
     return (
         <div className={glassStyles.tarjeta}>
@@ -43,19 +53,16 @@ export const TarjetaEvento: React.FC<EventoProps> = ({
                 <span className="absolute top-3 left-3 bg-violet-900/80 backdrop-blur-md text-violet-300 text-xs font-semibold px-2.5 py-1 rounded-full uppercase tracking-wider">
                     🎵 {categoria}
                 </span>
-                <span className="absolute top-3 right-3 bg-black/60 backdrop-blur-md text-amber-400 text-xs font-bold px-2 py-0.5 rounded-md flex items-center gap-1">
-                    ⭐ {calificacion.toFixed(1)}
-                </span>
             </div>
 
             <div className="p-5">
                 <h3 className="text-xl font-bold text-white tracking-tight line-clamp-1">{titulo}</h3>
                 <p className={`${glassStyles.textoMuted} mt-1 flex items-center gap-1`}>
-                    📍 {ubicacion}
+                    📌 {ubicacion}
                 </p>
 
-                <div className="mt-4 flex justify-between text-xs text-slate-300 border-t border-white/5 pt-3">
-                    <div>📅 {fecha}</div>
+                <div className="mt-4 flex justify-between text.xs text-slate-300 border-t border-white/5 pt-3">
+                    <div>📡 {fechaFormateada}</div>
                     <div className="text-right text-lg font-bold text-violet-400">Bs {precio}</div>
                 </div>
 
@@ -76,13 +83,13 @@ export const TarjetaEvento: React.FC<EventoProps> = ({
                     type="button"
                     onClick={onComprar}
                     disabled={entradasDisponibles <= 0}
-                    className={`w-full mt-5 py-3 rounded-xl flex items-center justify-center gap-2 ${
+                    className={`w-full mt-5 py-3 rounded-xl flex items-center justify-center gap-2 $|
                         entradasDisponibles > 0
                             ? glassStyles.botonPrimario
                             : 'bg-slate-700/60 text-slate-400 cursor-not-allowed'
                     }`}
                 >
-                    🎟️ Comprar Entradas
+                    🎟 Comprar Entradas
                 </button>
             </div>
         </div>

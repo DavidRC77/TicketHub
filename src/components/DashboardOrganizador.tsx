@@ -15,8 +15,11 @@ interface Usuario {
 interface Evento {
   id: string;
   titulo: string;
+  categoria: string;
   fecha: string;
-  precio: string;
+  precio: number;
+  url_imagen?: string | null;
+  calificacion?: number | null;
   entradas_disponibles: number;
   total_entradas: number;
 }
@@ -25,6 +28,10 @@ interface MetricaProps {
   titulo: string;
   valor: string | number;
   icono: string;
+}
+
+interface EntradaEvento {
+  evento_id: string;
 }
 
 function Metrica({ titulo, valor, icono }: MetricaProps) {
@@ -56,6 +63,63 @@ export function DashboardOrganizador({
 }) {
   const supabase = createClient();
   const [eventosActuales, setEventosActuales] = useState<Evento[]>(eventos);
+  const [formularioEvento, setFormularioEvento] = useState({
+    titulo: '',
+    categoria: 'Otro',
+    url_imagen: '',
+    fecha: '',
+    ubicacion: '',
+    precio: '',
+    total_entradas: '',
+    descripcion: ''
+  });
+  const [editandoEvento, setEditandoEvento] = useState<Evento | null>(null);
+
+  async function guardarEvento() {
+    if (!formularioEvento.titulo || !formularioEvento.fecha || !formularioEvento.ubicacion || !formularioEvento.categoria || !formularioEvento.precio || !formularioEvento.total_entradas || !formularioEvento.descripcion) {
+      alert('Por favor complete todos los campos requeridos');
+      return;
+    }
+
+    const payload = {
+      ...formularioEvento,
+      precio: parseFloat(formularioEvento.precio),
+      total_entradas: parseInt(formularioEvento.total_entradas),
+      userId: usuario.id,
+      userRole: usuario.rol
+    };
+
+    if (editandoEvento) {
+      const res = await fetch('/api/events', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventId: editandoEvento.id,
+          updates: {
+            title: payload.titulo,
+            description: payload.descripcion,
+            date: payload.fecha,
+            location: payload.ubicacion,
+            category: payload.categoria,
+            price: payload.precio,
+            totalTickets: payload.total_entradas
+          },
+          userId: usuario.id,
+          userRole: usuario.rol
+        })
+      });
+      if (res.ok) location.reload();
+    } else {
+      const res = await fetch('/api/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) location.reload();
+      else { const e = await res.json(); alert('Error: ' + e.error); }
+    }
+  }
+
 
   async function actualizarStockEventos() {
     const eventoIds = eventosActuales.map((evento) => evento.id);
@@ -66,7 +130,7 @@ export function DashboardOrganizador({
       .select('evento_id')
       .in('evento_id', eventoIds);
 
-    const vendidasPorEvento = (data || []).reduce((mapa: Map<string, number>, entrada: any) => {
+    const vendidasPorEvento = (data || []).reduce((mapa: Map<string, number>, entrada: EntradaEvento) => {
       mapa.set(entrada.evento_id, (mapa.get(entrada.evento_id) || 0) + 1);
       return mapa;
     }, new Map<string, number>());
@@ -106,7 +170,7 @@ export function DashboardOrganizador({
 
   const ingresosActuales = eventosActuales.reduce(
     (total, evento) =>
-      total + (evento.total_entradas - evento.entradas_disponibles) * Number(evento.precio || 0),
+      total + (evento.total_entradas - evento.entradas_disponibles) * (evento.precio || 0),
     0
   );
 
@@ -145,30 +209,77 @@ export function DashboardOrganizador({
       <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
         <div className="space-y-8">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Metrica
-              titulo="Eventos Activos"
-              valor={estadisticas.eventos_activos}
-              icono="🎭"
-            />
-            <Metrica
-              titulo="Entradas Vendidas"
-              valor={entradasVendidas}
-              icono="🎟️"
-            />
-            <Metrica
-              titulo="Ingresos"
-              valor={ingresosFormato}
-              icono="💰"
-            />
+            <Metrica titulo="Eventos Activos" valor={estadisticas.eventos_activos} icono="🎭" />
+            <Metrica titulo="Entradas Vendidas" valor={entradasVendidas} icono="🎟️" />
+            <Metrica titulo="Ingresos" valor={ingresosFormato} icono="💰" />
           </div>
 
           <div className={glassStyles.panel + ' p-6'}>
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-white">Mis Eventos</h2>
               <button
+                onClick={() => {
+                  setEditandoEvento(null);
+                  setFormularioEvento({ titulo: '', categoria: 'Otro', url_imagen: '', calificacion: '5.0', fecha: '', ubicacion: '', precio: '', total_entradas: '', descripcion: '' });
+                }}
                 className={`px-4 py-2 rounded-lg text-white font-medium text-sm ${glassStyles.botonPrimario}`}
               >
                 + Nuevo Evento
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <input
+                value={formularioEvento.titulo}
+                onChange={(e) => setFormularioEvento({ ...formularioEvento, titulo: e.target.value })}
+                placeholder="Título"
+                className="bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-violet-500/50"
+              />
+              <input
+                value={formularioEvento.categoria}
+                onChange={(e) => setFormularioEvento({ ...formularioEvento, categoria: e.target.value })}
+                placeholder="Categoría"
+                className="bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-violet-500/50"
+              />
+              <input
+                value={formularioEvento.fecha}
+                onChange={(e) => setFormularioEvento({ ...formularioEvento, fecha: e.target.value })}
+                type="datetime-local"
+                placeholder="Fecha"
+                className="bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-violet-500/50"
+              />
+              <input
+                value={formularioEvento.ubicacion}
+                onChange={(e) => setFormularioEvento({ ...formularioEvento, ubicacion: e.target.value })}
+                placeholder="Ubicación"
+                className="bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-violet-500/50"
+              />
+              <input
+                value={formularioEvento.precio}
+                onChange={(e) => setFormularioEvento({ ...formularioEvento, precio: e.target.value })}
+                type="number"
+                placeholder="Precio"
+                className="bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-violet-500/50"
+              />
+              <input
+                value={formularioEvento.total_entradas}
+                onChange={(e) => setFormularioEvento({ ...formularioEvento, total_entradas: e.target.value })}
+                type="number"
+                placeholder="Total Entradas"
+                className="bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-violet-500/50"
+              />
+              <textarea
+                value={formularioEvento.descripcion}
+                onChange={(e) => setFormularioEvento({ ...formularioEvento, descripcion: e.target.value })}
+                placeholder="Descripción"
+                className="bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-violet-500/50 md:col-span-2"
+              />
+              <button
+                type="button"
+                onClick={guardarEvento}
+                className={"rounded-lg px-4 py-2 text-white font-medium " + glassStyles.botonPrimario}
+              >
+                Guardar cambios
               </button>
             </div>
 
@@ -177,17 +288,11 @@ export function DashboardOrganizador({
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-white/10">
-                      <th className="text-left py-3 px-4 text-slate-400 font-medium">
-                        Evento
-                      </th>
+                      <th className="text-left py-3 px-4 text-slate-400 font-medium">Evento</th>
+                      <th className="text-left py-3 px-4 text-slate-400 font-medium">Categoría</th>
                       <th className="text-left py-3 px-4 text-slate-400 font-medium">Fecha</th>
                       <th className="text-left py-3 px-4 text-slate-400 font-medium">Precio</th>
-                      <th className="text-left py-3 px-4 text-slate-400 font-medium">
-                        Entradas
-                      </th>
-                      <th className="text-left py-3 px-4 text-slate-400 font-medium">
-                        Acciones
-                      </th>
+                      <th className="text-left py-3 px-4 text-slate-400 font-medium">Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -199,6 +304,7 @@ export function DashboardOrganizador({
                         <td className="py-3 px-4 text-white font-medium line-clamp-1">
                           {evento.titulo}
                         </td>
+                        <td className="py-3 px-4 text-slate-300">{evento.categoria}</td>
                         <td className="py-3 px-4 text-slate-400">
                           {new Date(evento.fecha).toLocaleDateString('es-ES', {
                             day: '2-digit',
@@ -207,11 +313,8 @@ export function DashboardOrganizador({
                           })}
                         </td>
                         <td className="py-3 px-4 text-white">Bs {evento.precio}</td>
-                        <td className="py-3 px-4 text-white">
-                          {evento.entradas_disponibles}/{evento.total_entradas}
-                        </td>
                         <td className="py-3 px-4 space-x-2">
-                          <button className="text-violet-400 hover:text-violet-300 text-xs font-medium transition-colors">
+                          <button onClick={() => { setEditandoEvento(evento); setFormularioEvento({ titulo: evento.titulo, categoria: evento.categoria, url_imagen: evento.url_imagen || '', calificacion: evento.calificacion ? evento.calificacion.toString() : '5.0', fecha: evento.fecha, ubicacion: 'Sin ubicaci�n', precio: evento.precio.toString(), total_entradas: evento.total_entradas.toString(), descripcion: '' }); }} className="text-violet-400 hover:text-violet-300 text-xs font-medium transition-colors">
                             Editar
                           </button>
                           <button className="text-red-400 hover:text-red-300 text-xs font-medium transition-colors">

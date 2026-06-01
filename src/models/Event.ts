@@ -37,24 +37,28 @@ export const getEventsByOrganizer = async (organizerId: string): Promise<Event[]
 };
 
 export const createEvent = async (
-  title: string,
-  description: string,
-  date: string,
-  totalTickets: number,
-  createdBy: string
+  titulo: string,
+  descripcion: string,
+  fecha: string,
+  ubicacion: string,
+  categoria: string,
+  precio: number,
+  total_entradas: number,
+  creado_por: string
 ): Promise<Event | null> => {
   const { data, error } = await supabase
-    .from('events')
+    .from('eventos')
     .insert([
       {
-        titulo: title,
-        descripcion: description,
-        fecha: date,
-        total_entradas: totalTickets,
-        entradas_disponibles: totalTickets,
-        creado_por: createdBy,
-        categoria: 'Otro',
-        ubicacion: 'Sin ubicación',
+        titulo,
+        descripcion,
+        fecha,
+        ubicacion,
+        categoria,
+        precio,
+        total_entradas,
+        entradas_disponibles: total_entradas,
+        creado_por,
       },
     ])
     .select()
@@ -74,7 +78,7 @@ export const updateEvent = async (
   if (updates.title) updateData.title = updates.title;
   if (updates.title) updateData.titulo = updates.title;
   if (updates.description) updateData.descripcion = updates.description;
-  if (updates.date) updateData.fecha = updates.date.toISOString();
+  if (updates.date) updateData.fecha = new Date(updates.date).toISOString();
   if (updates.totalTickets) updateData.total_entradas = updates.totalTickets;
   if (updates.availableTickets) updateData.entradas_disponibles = updates.availableTickets;
   if (updates.location) updateData.ubicacion = updates.location;

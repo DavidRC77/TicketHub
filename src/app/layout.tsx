@@ -30,7 +30,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es">
+    <html lang="es" className="bg-[#0B0F19]">
       <head>
         <meta name="theme-color" content="#000000" />
         <meta name="mobile-web-app-capable" content="yes" />
@@ -38,7 +38,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <link rel="icon" href="/icons/icon-192x192.png" />
       </head>
-      <body className="bg-white text-black font-sans">
+      <body className="m-0 min-h-screen bg-[#0B0F19] text-white font-sans antialiased">
         {children}
       </body>
     </html>

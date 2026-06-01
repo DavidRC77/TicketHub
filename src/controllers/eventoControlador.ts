@@ -114,10 +114,13 @@ export const fetchUserEvents = async (organizerId: string): Promise<ApiResponse<
 };
 
 export const createNewEvent = async (
-  title: string,
-  description: string,
-  date: string,
-  totalTickets: number,
+  titulo: string,
+  descripcion: string,
+  fecha: string,
+  ubicacion: string,
+  categoria: string,
+  precio: number,
+  total_entradas: number,
   userId: string,
   userRole: UserRole
 ): Promise<ApiResponse<Event>> => {
@@ -129,7 +132,7 @@ export const createNewEvent = async (
     };
   }
 
-  const evento = await createEvent(title, description, date, totalTickets, userId);
+  const evento = await createEvent(titulo, descripcion, fecha, ubicacion, categoria, precio, total_entradas, userId);
 
   if (!evento) {
     return {

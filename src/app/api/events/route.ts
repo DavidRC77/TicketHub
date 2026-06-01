@@ -35,10 +35,13 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
 
   const result = await createNewEvent(
-    body.title,
-    body.description,
-    body.date,
-    body.totalTickets,
+    body.titulo,
+    body.descripcion,
+    body.fecha,
+    body.ubicacion,
+    body.categoria,
+    body.precio,
+    body.total_entradas,
     body.userId,
     body.userRole
   );

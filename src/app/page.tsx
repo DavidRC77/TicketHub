@@ -20,7 +20,7 @@ interface Evento {
   ubicacion: string;
   categoria: string;
   precio: number;
-  calificacion: number;
+  calificacion: number | null;
   url_imagen: string | null;
   entradas_disponibles: number;
   total_entradas: number;
@@ -130,7 +130,9 @@ export default async function Page() {
   if (perfilTyped.rol === 'organizador') {
     const { data: eventosRaw } = await supabase
       .from('eventos')
-      .select('id, titulo, fecha, precio, entradas_disponibles, total_entradas')
+      .select(
+        'id, titulo, fecha, precio, categoria, url_imagen, calificacion, entradas_disponibles, total_entradas'
+      )
       .eq('creado_por', perfilTyped.id)
       .order('fecha', { ascending: true });
 
@@ -166,16 +168,22 @@ export default async function Page() {
       );
     }
 
-    const eventos: any[] = (eventosRaw || []).map((evt: any) => ({
+    const eventos: Evento[] = (eventosRaw || []).map((evt: any) => ({
       id: evt.id,
       titulo: evt.titulo,
+      descripcion: '',
       fecha: evt.fecha,
+      ubicacion: '',
+      categoria: evt.categoria || 'Otro',
       precio: evt.precio,
+      calificacion: evt.calificacion ?? null,
+      url_imagen: evt.url_imagen || null,
       entradas_disponibles: Math.max(
         evt.total_entradas - (vendidasPorEvento.get(evt.id) || 0),
         0
       ),
       total_entradas: evt.total_entradas,
+      creado_por: perfilTyped.id,
     }));
 
     const estadisticas: Estadisticas = {

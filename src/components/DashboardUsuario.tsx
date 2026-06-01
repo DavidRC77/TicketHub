@@ -26,6 +26,10 @@ interface Evento {
   calificacion?: number;
 }
 
+interface EntradaEvento {
+  evento_id: string;
+}
+
 function formatearBolivianos(monto: number) {
   return `Bs ${Number(monto || 0).toLocaleString('es-ES', {
     minimumFractionDigits: 2,
@@ -42,6 +46,8 @@ export function DashboardUsuario({ usuario, eventos }: { usuario: Usuario; event
   const [mensajeError, setMensajeError] = useState('');
   const [metodoPago, setMetodoPago] = useState<'visa' | 'mastercard'>('visa');
   const [cantidadEntradas, setCantidadEntradas] = useState(1);
+  const [calificacionSeleccionada, setCalificacionSeleccionada] = useState(5);
+  const [guardandoCalificacion, setGuardandoCalificacion] = useState(false);
 
   async function actualizarStockEventos() {
     const eventoIds = eventosActuales.map((evento) => evento.id);
@@ -52,7 +58,7 @@ export function DashboardUsuario({ usuario, eventos }: { usuario: Usuario; event
       .select('evento_id')
       .in('evento_id', eventoIds);
 
-    const vendidasPorEvento = (data || []).reduce((mapa: Map<string, number>, entrada: any) => {
+    const vendidasPorEvento = (data || []).reduce((mapa: Map<string, number>, entrada: EntradaEvento) => {
       mapa.set(entrada.evento_id, (mapa.get(entrada.evento_id) || 0) + 1);
       return mapa;
     }, new Map<string, number>());
@@ -96,11 +102,12 @@ export function DashboardUsuario({ usuario, eventos }: { usuario: Usuario; event
   }, [eventosActuales]);
 
   function cerrarModal() {
-    if (procesandoPago) return;
+    if (procesandoPago || guardandoCalificacion) return;
     setEventoSeleccionado(null);
     setCompraExitosa(false);
     setMensajeError('');
     setCantidadEntradas(1);
+    setCalificacionSeleccionada(5);
   }
 
   async function confirmarPagoSimulado() {
@@ -142,7 +149,61 @@ export function DashboardUsuario({ usuario, eventos }: { usuario: Usuario; event
       actuales.map((evento) => (evento.id === eventoSeleccionado.id ? eventoActualizado : evento))
     );
     setEventoSeleccionado(eventoActualizado);
+    setCalificacionSeleccionada(Math.round(eventoActualizado.calificacion ?? 5));
     setCompraExitosa(true);
+  }
+
+  async function calificarEvento() {
+    if (!eventoSeleccionado || guardandoCalificacion) return;
+
+    try {
+      setGuardandoCalificacion(true);
+
+      const { error } = await supabase
+        .from('eventos')
+        .update({ calificacion: calificacionSeleccionada })
+        .eq('id', eventoSeleccionado.id);
+
+      if (error) throw error;
+
+      const eventoActualizado = {
+        ...eventoSeleccionado,
+        calificacion: calificacionSeleccionada,
+      };
+
+      setEventosActuales((actuales) =>
+        actuales.map((evento) =>
+          evento.id === eventoSeleccionado.id ? eventoActualizado : evento
+        )
+      );
+      setEventoSeleccionado(eventoActualizado);
+    } catch (error) {
+      console.error('Error guardando calificación:', error);
+      setMensajeError('No se pudo guardar tu calificación. Inténtalo nuevamente.');
+    } finally {
+      setGuardandoCalificacion(false);
+    }
+  }
+
+  function renderEstrellas(valor: number, interactivo = false) {
+    return Array.from({ length: 5 }, (_, index) => {
+      const estrella = index + 1;
+      const activa = estrella <= valor;
+
+      return (
+        <button
+          key={estrella}
+          type="button"
+          disabled={!interactivo || guardandoCalificacion}
+          onClick={() => interactivo && setCalificacionSeleccionada(estrella)}
+          className={`text-2xl transition-transform ${
+            activa ? 'text-amber-400' : 'text-slate-600'
+          } ${interactivo ? 'hover:scale-110' : ''} ${interactivo ? 'cursor-pointer' : 'cursor-default'}`}
+        >
+          ★
+        </button>
+      );
+    });
   }
 
   return (
@@ -238,6 +299,27 @@ export function DashboardUsuario({ usuario, eventos }: { usuario: Usuario; event
                     {formatearBolivianos(eventoSeleccionado.precio * cantidadEntradas)}
                   </p>
                 </div>
+
+                <div className="mb-5 rounded-xl border border-white/10 bg-white/5 p-4">
+                  <p className="text-sm font-semibold text-white">Califica este evento</p>
+                  <div className="mt-3 flex items-center justify-center gap-1">
+                    {renderEstrellas(calificacionSeleccionada, true)}
+                  </div>
+                  <p className="mt-2 text-center text-xs text-slate-400">
+                    Tu calificación se guardará en la ficha del evento
+                  </p>
+                  <button
+                    type="button"
+                    onClick={calificarEvento}
+                    disabled={guardandoCalificacion}
+                    className={`mt-4 w-full rounded-xl py-3 ${glassStyles.botonPrimario} ${
+                      guardandoCalificacion ? 'cursor-not-allowed opacity-70' : ''
+                    }`}
+                  >
+                    {guardandoCalificacion ? 'Guardando...' : 'Guardar calificación'}
+                  </button>
+                </div>
+
                 <button
                   type="button"
                   onClick={cerrarModal}
@@ -259,6 +341,9 @@ export function DashboardUsuario({ usuario, eventos }: { usuario: Usuario; event
                     <p className="mt-2 text-sm text-slate-400">
                       {eventoSeleccionado.ubicacion}
                     </p>
+                    <div className="mt-3 flex items-center gap-1">
+                      {renderEstrellas(Number(eventoSeleccionado.calificacion ?? 5))}
+                    </div>
                     <p className="mt-3 text-xl font-bold text-violet-300">
                       {formatearBolivianos(eventoSeleccionado.precio * cantidadEntradas)}
                     </p>

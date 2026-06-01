@@ -423,80 +423,7 @@ export function AdminDashboardClient({
     }
   }
 
-  async function crearEvento() {
-    if (!formularioEvento.titulo || !formularioEvento.ubicacion || !formularioEvento.precio) {
-      alert('Por favor complete todos los campos');
-      return;
-    }
-
-    try {
-      const { error } = await supabase.from('eventos').insert({
-        titulo: formularioEvento.titulo,
-        descripcion: formularioEvento.descripcion,
-        fecha: fechaSeleccionada,
-        ubicacion: formularioEvento.ubicacion,
-        precio: parseFloat(formularioEvento.precio),
-        total_entradas: parseInt(formularioEvento.total_entradas) || 100,
-        entradas_disponibles: parseInt(formularioEvento.total_entradas) || 100,
-        creado_por: usuarioAuth.id,
-        categoria: 'Otro',
-        calificacion: 5.0,
-      });
-
-      if (error) throw error;
-      setFormularioEvento({
-        titulo: '',
-        descripcion: '',
-        ubicacion: '',
-        precio: '',
-        total_entradas: '',
-      });
-      await cargarEventosPorFecha();
-      alert('Evento creado exitosamente');
-    } catch (error) {
-      console.error('Error creando evento:', error);
-      alert('Error al crear el evento');
-    }
-  }
-
-  async function editarEvento() {
-    if (!editandoEvento) return;
-
-    try {
-      const totalEntradas = parseInt(formularioEvento.total_entradas) || editandoEvento.total_entradas;
-      const entradasVendidas = editandoEvento.total_entradas - editandoEvento.entradas_disponibles;
-      const entradasDisponibles = Math.max(totalEntradas - entradasVendidas, 0);
-
-      const { error } = await supabase
-        .from('eventos')
-        .update({
-          titulo: formularioEvento.titulo,
-          descripcion: formularioEvento.descripcion,
-          ubicacion: formularioEvento.ubicacion,
-          precio: parseFloat(formularioEvento.precio),
-          total_entradas: totalEntradas,
-          entradas_disponibles: entradasDisponibles,
-        })
-        .eq('id', editandoEvento.id);
-
-      if (error) throw error;
-      setEditandoEvento(null);
-      setFormularioEvento({
-        titulo: '',
-        descripcion: '',
-        ubicacion: '',
-        precio: '',
-        total_entradas: '',
-      });
-      await cargarEventosPorFecha();
-      alert('Evento actualizado exitosamente');
-    } catch (error) {
-      console.error('Error editando evento:', error);
-      alert('Error al editar el evento');
-    }
-  }
-
-  async function eliminarEvento(id: string) {
+   async function eliminarEvento(id: string) {
     if (!confirm('¿Está seguro de que desea eliminar este evento?')) return;
 
     try {
@@ -955,76 +882,6 @@ export function AdminDashboardClient({
               </p>
             </div>
 
-            {/* Formulario para Crear/Editar Evento */}
-            <div className={glassStyles.panel + ' p-6'}>
-              <h3 className="text-lg font-bold text-white mb-4">
-                {editandoEvento ? 'Editar Evento' : 'Crear Nuevo Evento'}
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <input
-                  type="text"
-                  placeholder="Título del evento"
-                  value={formularioEvento.titulo}
-                  onChange={(e) =>
-                    setFormularioEvento({ ...formularioEvento, titulo: e.target.value })
-                  }
-                  className="bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20"
-                />
-                <input
-                  type="text"
-                  placeholder="Ubicación"
-                  value={formularioEvento.ubicacion}
-                  onChange={(e) =>
-                    setFormularioEvento({ ...formularioEvento, ubicacion: e.target.value })
-                  }
-                  className="bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20"
-                />
-                <input
-                  type="number"
-                  placeholder="Precio (Bs)"
-                  value={formularioEvento.precio}
-                  onChange={(e) =>
-                    setFormularioEvento({ ...formularioEvento, precio: e.target.value })
-                  }
-                  className="bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20"
-                />
-                <input
-                  type="number"
-                  placeholder="Total de entradas"
-                  value={formularioEvento.total_entradas}
-                  onChange={(e) =>
-                    setFormularioEvento({ ...formularioEvento, total_entradas: e.target.value })
-                  }
-                  className="bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20"
-                />
-              </div>
-              <textarea
-                placeholder="Descripción"
-                value={formularioEvento.descripcion}
-                onChange={(e) =>
-                  setFormularioEvento({ ...formularioEvento, descripcion: e.target.value })
-                }
-                className="w-full mt-4 bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20"
-                rows={3}
-              />
-              <div className="flex gap-3 mt-4">
-                <button
-                  onClick={editandoEvento ? editarEvento : crearEvento}
-                  className={`flex-1 px-4 py-2 rounded-lg text-white font-medium ${glassStyles.botonPrimario}`}
-                >
-                  {editandoEvento ? 'Guardar Cambios' : 'Crear Evento'}
-                </button>
-                {editandoEvento && (
-                  <button
-                    onClick={cerrarEdicion}
-                    className="flex-1 px-4 py-2 rounded-lg text-white font-medium bg-slate-500/20 border border-slate-500/30 hover:bg-slate-500/30 transition-colors"
-                  >
-                    Cancelar
-                  </button>
-                )}
-              </div>
-            </div>
-
             {/* Lista de Eventos por Fecha */}
             <div className={glassStyles.panel + ' p-6'}>
               <h3 className="text-lg font-bold text-white mb-4">Eventos del Día</h3>
@@ -1061,12 +918,6 @@ export function AdminDashboardClient({
                           </div>
                         </div>
                         <div className="flex gap-2 ml-4">
-                          <button
-                            onClick={() => abrirEdicion(evento)}
-                            className="px-3 py-1.5 bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-lg text-sm font-medium hover:bg-blue-500/30 transition-colors"
-                          >
-                            Editar
-                          </button>
                           <button
                             onClick={() => eliminarEvento(evento.id)}
                             className="px-3 py-1.5 bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg text-sm font-medium hover:bg-red-500/30 transition-colors"
