@@ -45,7 +45,7 @@ export const registerUser = async (
 
 export const promoteToOrganizer = async (
   userId: string,
-  adminId: string,
+  _adminId: string,
   adminRole: UserRole
 ): Promise<ApiResponse<void>> => {
   try {
@@ -57,7 +57,7 @@ export const promoteToOrganizer = async (
       };
     }
 
-    const updated = await updateUserRole(userId, 'organizer');
+    const updated = await updateUserRole(userId, 'organizador');
 
     if (!updated) {
       return {
@@ -79,7 +79,7 @@ export const promoteToOrganizer = async (
 
 export const promoteToAdmin = async (
   userId: string,
-  adminId: string,
+  _adminId: string,
   adminRole: UserRole
 ): Promise<ApiResponse<void>> => {
   try {

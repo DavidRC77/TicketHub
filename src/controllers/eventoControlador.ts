@@ -1,6 +1,14 @@
-"use server";
-
 import { EventoModelo, EntradaModelo, PerfilModelo } from '../models/db';
+import {
+  createEvent,
+  deleteEvent,
+  getAllEvents,
+  getEventById,
+  getEventsByOrganizer,
+  updateEvent,
+} from '@/models/Event';
+import { isAdmin, isOrganizer } from '@/lib/rbac';
+import { ApiResponse, Event, UserRole } from '@/types';
 
 export const EventoControlador = {
   async procesarCreacionEvento(formData: {
@@ -79,4 +87,110 @@ export const EventoControlador = {
       };
     }
   }
+};
+
+export const fetchAllEvents = async (): Promise<ApiResponse<Event[]>> => {
+  const eventos = await getAllEvents();
+  return { success: true, data: eventos };
+};
+
+export const fetchEventById = async (eventId: string): Promise<ApiResponse<Event>> => {
+  const evento = await getEventById(eventId);
+
+  if (!evento) {
+    return {
+      success: false,
+      error: 'Evento no encontrado',
+      code: 'EVENTO_NO_ENCONTRADO',
+    };
+  }
+
+  return { success: true, data: evento };
+};
+
+export const fetchUserEvents = async (organizerId: string): Promise<ApiResponse<Event[]>> => {
+  const eventos = await getEventsByOrganizer(organizerId);
+  return { success: true, data: eventos };
+};
+
+export const createNewEvent = async (
+  title: string,
+  description: string,
+  date: string,
+  totalTickets: number,
+  userId: string,
+  userRole: UserRole
+): Promise<ApiResponse<Event>> => {
+  if (!isOrganizer(userRole)) {
+    return {
+      success: false,
+      error: 'No tiene permisos para crear eventos',
+      code: 'SIN_PERMISOS',
+    };
+  }
+
+  const evento = await createEvent(title, description, date, totalTickets, userId);
+
+  if (!evento) {
+    return {
+      success: false,
+      error: 'No se pudo crear el evento',
+      code: 'CREACION_FALLIDA',
+    };
+  }
+
+  return { success: true, data: evento };
+};
+
+export const modifyEvent = async (
+  eventId: string,
+  updates: Partial<Event>,
+  _userId: string,
+  userRole: UserRole
+): Promise<ApiResponse<Event>> => {
+  if (!isOrganizer(userRole)) {
+    return {
+      success: false,
+      error: 'No tiene permisos para editar eventos',
+      code: 'SIN_PERMISOS',
+    };
+  }
+
+  const evento = await updateEvent(eventId, updates);
+
+  if (!evento) {
+    return {
+      success: false,
+      error: 'No se pudo actualizar el evento',
+      code: 'ACTUALIZACION_FALLIDA',
+    };
+  }
+
+  return { success: true, data: evento };
+};
+
+export const removeEvent = async (
+  eventId: string,
+  _userId: string,
+  userRole: UserRole
+): Promise<ApiResponse<void>> => {
+  if (!isAdmin(userRole) && !isOrganizer(userRole)) {
+    return {
+      success: false,
+      error: 'No tiene permisos para eliminar eventos',
+      code: 'SIN_PERMISOS',
+    };
+  }
+
+  const eliminado = await deleteEvent(eventId);
+
+  if (!eliminado) {
+    return {
+      success: false,
+      error: 'No se pudo eliminar el evento',
+      code: 'ELIMINACION_FALLIDA',
+    };
+  }
+
+  return { success: true };
 };

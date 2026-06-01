@@ -4,3 +4,4 @@ import { createClient as createBrowserClient } from '@/utils/supabase/client';
 export { createServerClient as createClient };
 
 export const getSupabaseClient = createBrowserClient;
+export const supabase = createBrowserClient();

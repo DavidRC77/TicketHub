@@ -3,7 +3,7 @@ import { DatabaseTicket, Ticket } from '@/types';
 
 export const getTicketById = async (id: string): Promise<Ticket | null> => {
   const { data, error } = await supabase
-    .from('tickets')
+    .from('entradas')
     .select('*')
     .eq('id', id)
     .single();
@@ -15,10 +15,10 @@ export const getTicketById = async (id: string): Promise<Ticket | null> => {
 
 export const getUserTickets = async (userId: string): Promise<Ticket[]> => {
   const { data, error } = await supabase
-    .from('tickets')
+    .from('entradas')
     .select('*')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false });
+    .eq('usuario_id', userId)
+    .order('creado_at', { ascending: false });
 
   if (error) return [];
 
@@ -27,10 +27,10 @@ export const getUserTickets = async (userId: string): Promise<Ticket[]> => {
 
 export const getEventTickets = async (eventId: string): Promise<Ticket[]> => {
   const { data, error } = await supabase
-    .from('tickets')
+    .from('entradas')
     .select('*')
-    .eq('event_id', eventId)
-    .order('created_at', { ascending: false });
+    .eq('evento_id', eventId)
+    .order('creado_at', { ascending: false });
 
   if (error) return [];
 
@@ -42,12 +42,12 @@ export const createTicket = async (
   userId: string
 ): Promise<Ticket | null> => {
   const { data, error } = await supabase
-    .from('tickets')
+    .from('entradas')
     .insert([
       {
-        event_id: eventId,
-        user_id: userId,
-        status: 'active',
+        evento_id: eventId,
+        usuario_id: userId,
+        estado: 'activo',
       },
     ])
     .select()
@@ -63,8 +63,8 @@ export const updateTicketStatus = async (
   status: string
 ): Promise<Ticket | null> => {
   const { data, error } = await supabase
-    .from('tickets')
-    .update({ status, updated_at: new Date().toISOString() })
+    .from('entradas')
+    .update({ estado: status, actualizado_at: new Date().toISOString() })
     .eq('id', id)
     .select()
     .single();
@@ -75,17 +75,17 @@ export const updateTicketStatus = async (
 };
 
 export const deleteTicket = async (id: string): Promise<boolean> => {
-  const { error } = await supabase.from('tickets').delete().eq('id', id);
+  const { error } = await supabase.from('entradas').delete().eq('id', id);
 
   return !error;
 };
 
 export const hasUserTicketForEvent = async (userId: string, eventId: string): Promise<boolean> => {
   const { data, error } = await supabase
-    .from('tickets')
+    .from('entradas')
     .select('id')
-    .eq('user_id', userId)
-    .eq('event_id', eventId)
+    .eq('usuario_id', userId)
+    .eq('evento_id', eventId)
     .single();
 
   return !error && !!data;
@@ -93,9 +93,9 @@ export const hasUserTicketForEvent = async (userId: string, eventId: string): Pr
 
 const mapDatabaseTicketToTicket = (ticket: DatabaseTicket): Ticket => ({
   id: ticket.id,
-  eventId: ticket.event_id,
-  userId: ticket.user_id,
-  status: ticket.status as any,
-  createdAt: new Date(ticket.created_at),
-  updatedAt: new Date(ticket.updated_at),
+  eventId: ticket.evento_id,
+  userId: ticket.usuario_id,
+  status: ticket.estado as any,
+  createdAt: new Date(ticket.creado_at),
+  updatedAt: new Date(ticket.actualizado_at),
 });

@@ -1,4 +1,4 @@
-export const Header: React.FC<React.HTMLAttributes<HTMLHeaderElement>> = ({
+export const Header: React.FC<React.HTMLAttributes<HTMLElement>> = ({
   className = '',
   children,
   ...props
@@ -13,7 +13,7 @@ export const Header: React.FC<React.HTMLAttributes<HTMLHeaderElement>> = ({
   );
 };
 
-export const Footer: React.FC<React.HTMLAttributes<HTMLFooterElement>> = ({
+export const Footer: React.FC<React.HTMLAttributes<HTMLElement>> = ({
   className = '',
   children,
   ...props

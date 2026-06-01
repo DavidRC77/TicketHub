@@ -338,6 +338,10 @@ export function AdminDashboardClient({
     if (!editandoEvento) return;
 
     try {
+      const totalEntradas = parseInt(formularioEvento.total_entradas) || editandoEvento.total_entradas;
+      const entradasVendidas = editandoEvento.total_entradas - editandoEvento.entradas_disponibles;
+      const entradasDisponibles = Math.max(totalEntradas - entradasVendidas, 0);
+
       const { error } = await supabase
         .from('eventos')
         .update({
@@ -345,6 +349,8 @@ export function AdminDashboardClient({
           descripcion: formularioEvento.descripcion,
           ubicacion: formularioEvento.ubicacion,
           precio: parseFloat(formularioEvento.precio),
+          total_entradas: totalEntradas,
+          entradas_disponibles: entradasDisponibles,
         })
         .eq('id', editandoEvento.id);
 

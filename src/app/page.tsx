@@ -111,7 +111,7 @@ export default async function Page() {
       .eq('creado_por', perfilTyped.id)
       .order('fecha', { ascending: true });
 
-    const { data: estadisticasRaw, error: estadisticasError } = await supabase
+    const { data: estadisticasRaw } = await supabase
       .from('eventos')
       .select('id')
       .eq('creado_por', perfilTyped.id);
@@ -129,14 +129,22 @@ export default async function Page() {
       entradasVendidas = entradasRaw?.length || 0;
     }
 
-    const { data: preciosRaw } = await supabase
-      .from('eventos')
-      .select('precio')
-      .eq('creado_por', perfilTyped.id);
+    const preciosPorEvento = new Map(
+      (eventosRaw || []).map((evt: any) => [evt.id, Number(evt.precio || 0)])
+    );
 
-    const ingresosTotal =
-      (preciosRaw || []).reduce((sum: number, evt: any) => sum + (evt.precio || 0), 0) *
-      entradasVendidas;
+    let ingresosTotal = 0;
+    if (eventoIds.length > 0) {
+      const { data: entradasRaw } = await supabase
+        .from('entradas')
+        .select('evento_id')
+        .in('evento_id', eventoIds);
+
+      ingresosTotal = (entradasRaw || []).reduce(
+        (total: number, entrada: any) => total + (preciosPorEvento.get(entrada.evento_id) || 0),
+        0
+      );
+    }
 
     const eventos: any[] = (eventosRaw || []).map((evt: any) => ({
       id: evt.id,
@@ -184,35 +192,31 @@ export default async function Page() {
       creado_por_nombre: perfilesMap.get(evt.creado_por) || 'Desconocido',
     }));
 
-    const { data: usuariosCount } = await supabase
+    const { count: usuariosCount } = await supabase
       .from('perfiles')
       .select('id', { count: 'exact' });
 
-    const { data: eventosCount } = await supabase
+    const { count: eventosCount } = await supabase
       .from('eventos')
       .select('id', { count: 'exact' });
 
-    const { data: entradasCount } = await supabase
+    const { count: entradasCount } = await supabase
       .from('entradas')
       .select('id', { count: 'exact' });
 
-    const { data: eventosConPrecios } = await supabase.from('eventos').select('id, precio');
-    
-    let ingresosTotal = 0;
-    if (eventosConPrecios && eventosConPrecios.length > 0) {
-      for (const evento of eventosConPrecios) {
-        const { count: ticketsVendidos } = await supabase
-          .from('entradas')
-          .select('id', { count: 'exact' })
-          .eq('evento_id', evento.id);
-        ingresosTotal += (ticketsVendidos || 0) * (evento.precio || 0);
-      }
-    }
+    const { data: entradasConPrecio } = await supabase
+      .from('entradas')
+      .select('eventos(precio)');
 
-    const estadisticas: Estadisticas = {
-      usuarios_totales: usuariosCount?.length || 0,
-      eventos_totales: eventosCount?.length || 0,
-      entradas_vendidas: entradasCount?.length || 0,
+    const ingresosTotal = (entradasConPrecio || []).reduce((total: number, entrada: any) => {
+      const evento = Array.isArray(entrada.eventos) ? entrada.eventos[0] : entrada.eventos;
+      return total + Number(evento?.precio || 0);
+    }, 0);
+
+    const estadisticas = {
+      usuarios_totales: usuariosCount || 0,
+      eventos_totales: eventosCount || 0,
+      entradas_vendidas: entradasCount || 0,
       ingresos_total: ingresosTotal,
     };
 

@@ -74,6 +74,9 @@ export function DashboardOrganizador({
               </span>
             </h1>
             <p className="text-sm text-slate-400">Panel de Gestión de Eventos</p>
+            <p className="text-xs text-slate-500">
+              {usuario.nombre_completo || usuario.correo}
+            </p>
           </div>
           <form action={logoutAction}>
             <button

@@ -1,9 +1,9 @@
-import { supabase } from './supabase';
+import { supabase } from '@/lib/supabase';
 import { DatabaseProfile, User } from '@/types';
 
 export const getUserById = async (id: string): Promise<User | null> => {
   const { data, error } = await supabase
-    .from('profiles')
+    .from('perfiles')
     .select('*')
     .eq('id', id)
     .single();
@@ -15,9 +15,9 @@ export const getUserById = async (id: string): Promise<User | null> => {
 
 export const getUserByEmail = async (email: string): Promise<User | null> => {
   const { data, error } = await supabase
-    .from('profiles')
+    .from('perfiles')
     .select('*')
-    .eq('email', email)
+    .eq('correo', email)
     .single();
 
   if (error) return null;
@@ -30,8 +30,8 @@ export const createUser = async (
   role: string
 ): Promise<User | null> => {
   const { data, error } = await supabase
-    .from('profiles')
-    .insert([{ email, role }])
+    .from('perfiles')
+    .insert([{ correo: email, rol: role }])
     .select()
     .single();
 
@@ -42,8 +42,8 @@ export const createUser = async (
 
 export const updateUserRole = async (id: string, role: string): Promise<User | null> => {
   const { data, error } = await supabase
-    .from('profiles')
-    .update({ role, updated_at: new Date().toISOString() })
+    .from('perfiles')
+    .update({ rol: role, actualizado_at: new Date().toISOString() })
     .eq('id', id)
     .select()
     .single();
@@ -55,7 +55,7 @@ export const updateUserRole = async (id: string, role: string): Promise<User | n
 
 export const getAllUsers = async (): Promise<User[]> => {
   const { data, error } = await supabase
-    .from('profiles')
+    .from('perfiles')
     .select('*');
 
   if (error) return [];
@@ -65,8 +65,9 @@ export const getAllUsers = async (): Promise<User[]> => {
 
 const mapDatabaseProfileToUser = (profile: DatabaseProfile): User => ({
   id: profile.id,
-  email: profile.email,
-  role: profile.role as any,
-  createdAt: new Date(profile.created_at),
-  updatedAt: new Date(profile.updated_at),
+  email: profile.correo,
+  nombreCompleto: profile.nombre_completo,
+  role: profile.rol as any,
+  createdAt: new Date(profile.creado_at),
+  updatedAt: new Date(profile.actualizado_at),
 });

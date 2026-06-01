@@ -37,7 +37,7 @@ export const EventoModelo = {
     const { data, error } = await supabase
       .from('eventos')
       .select('*')
-      .eq('creado_by', organizadorId)
+      .eq('creado_por', organizadorId)
       .order('creado_at', { ascending: false });
     if (error) throw error;
     return data;

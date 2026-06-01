@@ -1,10 +1,13 @@
-export type UserRole = 'admin' | 'organizer' | 'user';
+export * from './database';
 
-export type TicketStatus = 'active' | 'used';
+export type UserRole = 'admin' | 'organizador' | 'usuario' | 'organizer' | 'user';
+
+export type TicketStatus = 'activo' | 'usado' | 'active' | 'used';
 
 export interface User {
   id: string;
   email: string;
+  nombreCompleto?: string | null;
   role: UserRole;
   createdAt: Date;
   updatedAt: Date;
@@ -14,6 +17,9 @@ export interface Event {
   id: string;
   title: string;
   description?: string;
+  category?: string;
+  location?: string;
+  price?: number;
   date: Date;
   totalTickets: number;
   availableTickets: number;
